@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101A25">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FluentCell">
+<title>FluentCell</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: tek sütun, alt sekme çubuğu. Test cihazı okuması gibi: şarj hücreleri (SoC), mono sayılar, düz köşeler. */
+:root{
+  --bg:#E8ECF0; --panel:#F6F8FA; --panel2:#D9E0E7; --ink:#101A25; --mute:#4A5B6E; --line:#C0C9D3;
+  --accent:#1D4ED8; --accent-ink:#FFFFFF; --accent-soft:#DAE4FB;
+  --ok:#0F7A4B; --warn:#A85F00; --bad:#BF3B2E;
+  --f-disp:'Barlow Semi Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D141C; --panel:#151F2A; --panel2:#213040; --ink:#E7EEF5; --mute:#9CB0C4; --line:#2A3A4B;
+    --accent:#7FA3FF; --accent-ink:#0A1431; --accent-soft:#1B2B52;
+    --ok:#3CC98B; --warn:#F0A93A; --bad:#F27D6F; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D141C; --panel:#151F2A; --panel2:#213040; --ink:#E7EEF5; --mute:#9CB0C4; --line:#2A3A4B;
+  --accent:#7FA3FF; --accent-ink:#0A1431; --accent-soft:#1B2B52;
+  --ok:#3CC98B; --warn:#F0A93A; --bad:#F27D6F; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 var(--f-body);
+  padding-block:calc(14px + env(safe-area-inset-top, 0px)) 0;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap{max-width:560px; margin:0 auto; padding-bottom:calc(104px + env(safe-area-inset-bottom, 0px))}
+button{font:inherit; color:inherit; cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+h1,h2,h3,p{margin:0}
+.mono{font-family:var(--f-mono); font-variant-numeric:tabular-nums}
+.lbl{font:500 11px/1.2 var(--f-mono); letter-spacing:.09em; text-transform:uppercase; color:var(--mute)}
+
+.top{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding-bottom:12px; border-bottom:2px solid var(--ink); margin-bottom:16px}
+.brand{font:700 22px/1 var(--f-disp); letter-spacing:.01em}
+.top .mono{font-size:12px; color:var(--mute)}
+
+.card{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:16px; margin-bottom:12px; min-width:0}
+.card h2{font:700 22px/1.15 var(--f-disp); text-wrap:balance}
+.card h2 + p{margin-top:6px}
+.sub{color:var(--mute); font-size:15px}
+.stack{display:flex; flex-direction:column; gap:12px}
+.row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.between{justify-content:space-between}
+
+.btn{border:1px solid var(--ink); background:transparent; border-radius:4px; padding:10px 14px; font-weight:600; min-height:44px}
+.btn.pri{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.btn.sm{padding:6px 12px; min-height:36px; font-size:14px}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{border-color:var(--line); color:var(--mute)}
+.btn[disabled]{opacity:.45; cursor:default}
+
+/* SoC */
+.soc{display:flex; align-items:center; gap:0; margin-top:12px}
+.cells{flex:1; display:grid; grid-template-columns:repeat(10,1fr); gap:3px; padding:4px; border:2px solid var(--ink); border-radius:4px}
+.cells i{height:30px; background:var(--panel2); border-radius:1px}
+.cells i.on{background:var(--soc)}
+.nub{width:6px; height:18px; background:var(--ink); border-radius:0 3px 3px 0}
+.read{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.big{font:700 44px/1 var(--f-mono); letter-spacing:-.02em}
+.big small{font-size:20px; font-weight:500; color:var(--mute)}
+.meta{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:12px; font:500 13px/1.3 var(--f-mono); color:var(--mute)}
+.meta b{color:var(--ink)}
+
+/* plan rows */
+.blk{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:12px; align-items:center; padding:14px 0; border-top:1px solid var(--line)}
+.blk:first-of-type{border-top:0}
+.blk h3{font:700 18px/1.2 var(--f-disp)}
+.blk p{font-size:14px; color:var(--mute); margin-top:2px}
+.blk-r{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
+.blk-r .mono{font-size:12px; color:var(--mute)}
+.chk{width:32px; height:32px; border:2px solid var(--ink); background:transparent; border-radius:4px; display:grid; place-items:center; padding:0}
+.is-done .chk{background:var(--ok); border-color:var(--ok); color:#fff}
+.is-done h3{text-decoration:line-through; text-decoration-thickness:2px; color:var(--mute)}
+
+.hist{display:grid; grid-template-columns:repeat(7,1fr); gap:6px}
+.hist div{display:flex; flex-direction:column; gap:5px; align-items:center; font:500 11px var(--f-mono); color:var(--mute)}
+.hist i{display:block; width:100%; height:22px; background:var(--panel2); border-radius:2px}
+.hist .part i{background:var(--accent); opacity:.55}
+.hist .full i{background:var(--ok)}
+.hist .now span{color:var(--ink); font-weight:700}
+
+/* quote block for English starter */
+.say{font:500 17px/1.45 var(--f-mono); background:var(--panel2); border-left:4px solid var(--accent); padding:12px 14px; border-radius:0 4px 4px 0; margin-top:10px; overflow-wrap:anywhere}
+
+/* bar with timer */
+.bar{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 12px; align-items:center; background:var(--accent-soft); border:1px solid var(--accent); border-radius:6px; padding:12px 14px; margin-bottom:12px}
+.bar b{font:700 17px/1.2 var(--f-disp)}
+.timer{font:700 30px/1 var(--f-mono); text-align:right}
+.bar .row{grid-column:1 / -1}
+.bar.done{background:transparent; border-color:var(--ok)}
+.bar.done b{color:var(--ok)}
+
+/* steps */
+ol.steps{list-style:none; counter-reset:s; padding:0; margin:12px 0 0; display:flex; flex-direction:column; gap:10px}
+ol.steps li{counter-increment:s; display:grid; grid-template-columns:28px minmax(0,1fr); gap:8px}
+ol.steps li::before{content:counter(s); font:700 14px/26px var(--f-mono); width:26px; height:26px; text-align:center; border:1.5px solid var(--ink); border-radius:4px}
+
+.seg{display:grid; grid-template-columns:1fr 1fr; border:1.5px solid var(--ink); border-radius:5px; overflow:hidden; margin-bottom:12px}
+.seg button{border:0; background:transparent; padding:11px; font-weight:600; min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+
+.res{display:flex; flex-direction:column; gap:0}
+.res a.item{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--line); text-decoration:none; color:inherit}
+.res a.item:first-child{border-top:0}
+.res b{font:700 17px/1.2 var(--f-disp); display:block}
+.res span.w{font-size:14px; color:var(--mute)}
+.res .go{color:var(--accent); font:600 13px var(--f-mono); white-space:nowrap}
+
+/* flashcards */
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:12px}
+.stat{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px 12px}
+.stat .n{font:700 28px/1.1 var(--f-mono)}
+.fc{min-height:230px; display:flex; flex-direction:column; justify-content:space-between; gap:16px}
+.fc .front{font:700 26px/1.2 var(--f-disp); text-wrap:balance}
+.fc .en{font:700 28px/1.2 var(--f-disp); color:var(--accent); text-wrap:balance; overflow-wrap:anywhere}
+.rate{display:grid; grid-template-columns:repeat(4,1fr); gap:6px}
+.rate button{border:1px solid var(--ink); background:transparent; border-radius:4px; padding:8px 2px; min-height:56px; font-weight:600; font-size:14px; display:flex; flex-direction:column; align-items:center; gap:2px}
+.rate button small{font:500 11px var(--f-mono); color:var(--mute)}
+.ico{display:inline-grid; place-items:center; width:40px; height:40px; border:1px solid var(--line); border-radius:4px; background:transparent}
+
+input[type=text],input[type=password],textarea{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:4px; padding:10px 12px; min-height:44px}
+textarea{resize:vertical; font:500 14px/1.45 var(--f-mono)}
+label{display:block; font-size:13px; color:var(--mute); margin:10px 0 4px}
+details{margin-top:4px}
+summary{cursor:pointer; font-weight:600; padding:8px 0; min-height:44px; display:flex; align-items:center}
+.list{margin:0; padding:0; list-style:none}
+.list li{display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:14px}
+.list li span:first-child{min-width:0; overflow-wrap:anywhere}
+.tag{font:500 11px var(--f-mono); color:var(--mute); white-space:nowrap}
+.mist{padding:10px 0; border-top:1px solid var(--line)}
+.mist .w{color:var(--bad); text-decoration:line-through; overflow-wrap:anywhere}
+.mist .r{color:var(--ok); font-weight:600; overflow-wrap:anywhere}
+
+nav.tabs{
+  position:fixed; left:0; right:0; bottom:0; z-index:20; background:var(--panel); border-top:2px solid var(--ink);
+  display:grid; grid-template-columns:repeat(4,1fr);
+  padding:6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+}
+nav.tabs button{border:0; background:transparent; display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px; min-height:52px; font:600 12px var(--f-body); color:var(--mute); border-radius:4px}
+nav.tabs button[aria-current="page"]{color:var(--accent); background:var(--accent-soft)}
+#toast{
+  position:fixed; left:50%; transform:translateX(-50%); bottom:calc(78px + env(safe-area-inset-bottom, 0px)); z-index:30;
+  background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:4px; font-size:14px; max-width:90vw;
+}
+.foot{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font:500 12px var(--f-mono); color:var(--mute); margin-top:8px}
+@media (prefers-reduced-motion: no-preference){ .cells i{transition:background .25s} }
+/* --- yapay zeka --- */
+.ai-tag{display:inline-flex; align-items:center; gap:6px; font:600 11px var(--f-mono); letter-spacing:.08em; text-transform:uppercase; color:var(--accent); border:1px solid var(--accent); border-radius:3px; padding:2px 6px}
+.err{color:var(--bad); font-size:14px; margin-top:8px}
+.out{margin-top:14px; border-top:2px solid var(--ink); padding-top:12px; display:flex; flex-direction:column; gap:10px}
+.out h3{font:700 16px/1.2 var(--f-disp); text-transform:uppercase; letter-spacing:.03em}
+.why{font-size:13px; color:var(--mute); margin-top:2px}
+.ph{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--line)}
+.ph b{display:block; font-weight:600; overflow-wrap:anywhere}
+.ph span{font-size:13px; color:var(--mute)}
+.chat{display:flex; flex-direction:column; gap:10px; margin-top:12px}
+.msg{max-width:92%; padding:10px 12px; border-radius:6px; font-size:15px; overflow-wrap:anywhere}
+.msg.me{align-self:flex-end; background:var(--accent); color:var(--accent-ink); border-bottom-right-radius:1px}
+.msg.bot{align-self:flex-start; background:var(--panel2); border-bottom-left-radius:1px}
+.msg .fb{font-size:13px; color:var(--mute); margin-bottom:6px}
+.msg .better{font:500 13px/1.4 var(--f-mono); color:var(--ok); margin-bottom:8px}
+.msg .q{font-weight:600}
+.spin{display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:sp .8s linear infinite; vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+select{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:4px; padding:10px 12px; min-height:44px}
+.gear{border:1px solid var(--line); background:transparent; border-radius:4px; width:38px; height:38px; display:grid; place-items:center; color:var(--ink)}
+.top .rt{display:flex; align-items:center; gap:10px}
+.ok-txt{color:var(--ok); font-size:14px; margin-top:8px}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<nav class="tabs" id="nav" aria-label="Bölümler"></nav>
+<div id="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- yardımcılar ---------- */
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var pad=function(n){return String(n).padStart(2,'0')};
+var dstr=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var parse=function(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+var addDays=function(s,n){var d=parse(s);d.setDate(d.getDate()+n);return dstr(d)};
+var diffDays=function(a,b){return Math.round((parse(a)-parse(b))/864e5)};
+var TODAY=function(){return dstr(new Date())};
+var MONTHS=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+var DAYS=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+var DS=['Pz','Pt','Sa','Ça','Pe','Cu','Ct'];
+var sv=function(d,s,w){s=s||22;w=w||1.8;return '<svg viewBox="0 0 24 24" width="'+s+'" height="'+s+'" fill="none" stroke="currentColor" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>'};
+var IC={
+  today:sv('<rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M22 10.5v3M6 10.5v3M10 10.5v3"/>'),
+  kartlar:sv('<rect x="4" y="7" width="16" height="12" rx="2"/><path d="M7 3.5h10"/>'),
+  video:sv('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4.5-2.5z"/>'),
+  konus:sv('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>'),
+  check:sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>',16,3),
+  gear:sv('<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',20),
+  spk:sv('<path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',20)
+};
+
+/* ---------- içerik ---------- */
+var BBC={n:'BBC Learning English: 6 Minute English',why:'6 dakikalık bölümler, B1-B2, yazılı metni var. Günde 1 bölüm.',url:'https://www.bbc.co.uk/learningenglish/english/features/6-minute-english'};
+var VOA={n:'VOA Learning English',why:'Yavaş tempolu haber ve hikâyeler. Takıldığında metni okuyabilirsin.',url:'https://learningenglish.voanews.com'};
+
+var DEF={
+  4:{tr:'Tutor dersi. Hedefini söyle: toplantıda anlayıp cevap verebilmek. Seni konuşturmasını, sadece büyük hataları düzeltmesini iste.',en:'My goal is to understand and answer in meetings. Please let me talk and correct only my biggest mistakes.'},
+  0:{tr:'Haftanın en zor anını İngilizce anlat, sonra o anda ne demen gerektiğini söyle.',en:'The hardest moment this week was… I wanted to say…'}
+};
+
+var WEEKS=[
+ {title:'Tanışma ve anlamadığını söyleme',goal:'Kendini 1 dakikada tanıtabilmek ve anlamadığında "Could you repeat that?" diyebilmek.',
+  listen:[BBC,{n:'Engineering Explained',why:'Net ve ölçülü hızda mühendislik anlatımı.',q:'Engineering Explained electric car battery'},VOA],
+  shadow:[{n:'mmmEnglish: kendini tanıtma',why:'Net telaffuz. 1-2 dk\'lık bölüm bulmak kolay.',q:'mmmEnglish introduce yourself in English'},{n:'Rachel\'s English',why:'Vurgu ve telaffuz üzerine kısa videolar.',q:'Rachel\'s English pronunciation'}],
+  prompts:{
+   1:{tr:'Kendini 1 dakika tanıt: adın, işin, ne test ediyorsun.',en:"I'm Engin. I'm a test engineer at a battery company. I test battery packs and…"},
+   2:{tr:'İşte tipik bir günün nasıl geçiyor?',en:'In the morning I… After that I… Usually I…'},
+   3:{tr:'Bugün işte ne test ettin, ne buldun?',en:'Today I tested… I found…'},
+   5:{tr:'Bu hafta çözdüğün bir sorunu anlat.',en:'This week we had a problem with… The cause was… We fixed it by…'},
+   6:{tr:'Haftayı 2 dakikalık toplantı sunumu gibi anlat.',en:'This week we tested… We found… The next step is…'}}},
+ {title:'Sorunu anlatma',goal:'Bir arızayı "sorun, neden, çözüm" sırasıyla 1-2 dakikada anlatabilmek.',
+  listen:[BBC,{n:'Real Engineering',why:'Batarya ve enerji konuları, görsel destekli.',q:'Real Engineering battery'},{n:'Munro Live',why:'Batarya paketi ve araç incelemeleri, sohbet havası.',q:'Munro Live battery pack'}],
+  shadow:[{n:'mmmEnglish: sorunu açıklama',why:'İş İngilizcesi kalıpları, net konuşma.',q:'mmmEnglish how to explain a problem at work'},{n:'Mühendisler için İngilizce',why:'Teknik anlatım örnekleri.',q:'English for engineers describing a problem'}],
+  prompts:{
+   1:{tr:'Hatalı bir hücre buldun. Neyi gördün, diğerlerinden farkı neydi?',en:'I found a faulty cell. The voltage was… compared to the others.'},
+   2:{tr:'Bir testin neden başarısız olduğunu açıkla.',en:'The test failed because… We think the root cause is…'},
+   3:{tr:'Bir arızayı nasıl bulduğunu adım adım anlat.',en:'First I checked… Then I measured… Finally I found…'},
+   5:{tr:'Çözülmemiş bir sorunu ve bir sonraki adımı anlat.',en:"We still don't know why… The next step is to…"},
+   6:{tr:'Bir arızayı toplantıda 2 dakikada özetle: sorun, neden, çözüm.',en:'The issue is… The root cause is… We fixed it by…'}}},
+ {title:'Rapor verme',goal:'Test sonucunu ve durumu net bir şekilde raporlayıp ne zaman biteceğini söyleyebilmek.',
+  listen:[BBC,{n:'Fully Charged Show',why:'Elektrikli araç ve batarya haberleri, İngiliz aksanı.',q:'Fully Charged Show battery'},{n:'TED-Ed: lityum-iyon pil',why:'Kısa, animasyonlu, açıklayıcı.',q:'TED-Ed lithium-ion battery how it works'}],
+  shadow:[{n:'mmmEnglish: işte durum güncellemesi',why:'Kısa ve net iş cümleleri.',q:'mmmEnglish status update at work'},{n:'İş için İngilizce rapor kalıpları',why:'Rapor ve ilerleme anlatımı.',q:'English for work progress report phrases'}],
+  prompts:{
+   1:{tr:'Test sonuçlarını özetle. Spec içinde mi, dışında mı?',en:'The results show… It is within spec / out of spec.'},
+   2:{tr:'Verinin neden yetersiz olduğunu söyle ve ne istediğini belirt.',en:'We need more data to… Could you…'},
+   3:{tr:'Bir işin ne zaman biteceğini ve riski anlat.',en:'It should be done by… There is a risk that…'},
+   5:{tr:'Haftalık ilerleme raporunu ver.',en:"This week I completed… I'm currently working on… Next week I'll…"},
+   6:{tr:'Müdürüne 2 dakikalık durum güncellemesi ver.',en:'I want to give a quick update on… The status is…'}}},
+ {title:'Toplantıda konuşma',goal:'Toplantıda söz alıp katılmak, itiraz etmek ve özetleyip kapatmak.',
+  listen:[BBC,{n:'Toplantı İngilizcesi',why:'Gerçek toplantı kalıpları, kısa videolar.',q:'business English meeting phrases'},{n:'Dinle: kısa teknik tartışma',why:'Toplantı temposunu kulağa alıştır.',q:'engineering team meeting English listening'}],
+  shadow:[{n:'mmmEnglish: toplantılarda konuşma',why:'Toplantı kalıpları, net telaffuz.',q:'mmmEnglish speaking in meetings'},{n:'Katılma ve itiraz kalıpları',why:'Agree ve disagree söylemenin nazik yolları.',q:'English meeting phrases agree disagree politely'}],
+  prompts:{
+   1:{tr:'Bir fikre katıl ve kendi eklemeni yap.',en:"I agree with that. I'd also add…"},
+   2:{tr:'Bir fikre nazikçe itiraz et.',en:"I see your point, but I'm concerned about…"},
+   3:{tr:'Ekranını paylaşarak bir grafiği anlat.',en:'Let me share my screen. As you can see here…'},
+   5:{tr:'Toplantıyı özetle ve yapılacakları say.',en:'To summarize… The action items are…'},
+   6:{tr:'Gerçek toplantı gibi: 2 dakika sunum, sonra 2 soruya cevap.',en:'Thanks everyone. Today I will talk about… Any questions?'}}}
+];
+
+var RAW=[
+ [['Birinin dediğini duymadın, tekrar iste','Could you repeat that, please?'],['Bir ifadenin ne demek olduğunu sor','Could you clarify what you mean by that?'],['Dediğini yakalayamadığını söyle',"Sorry, I didn't catch that."],['Daha yavaş konuşmasını iste','Could you speak a little slower?'],['Anladığını teyit et','Let me make sure I understand.'],['Kısa teyit sorusu sor','Do you mean the voltage or the current?'],['Kendini tanıt',"I'm Engin. I'm a test engineer."],['İşini tek cümlede anlat','I work on battery testing and troubleshooting.'],['Ne zamandır çalıştığını söyle',"I've been working here since April."],['Mezuniyetini söyle','I graduated in electrical engineering.'],['Tanıştığında','Nice to meet you.'],['Konuşmaya başlarken','Let me introduce myself.']],
+ [['Sorunu tanımla','The issue is the voltage drop under load.'],['Gördüğün şeyi söyle',"We're seeing a temperature rise during charging."],['Tahmin yürüt','It looks like one cell is weaker than the others.'],['Emin olmadığını belirt','As far as I know, the test was done last week.'],['Kök nedeni söyle','I think the root cause is a loose connection.'],['Henüz bilmiyorsun',"I'm not sure yet. I need to check."],['Sonra dönüş yapacağını söyle',"I'll get back to you on that."],['Voltaj limitin altına düştü','The cell voltage dropped below the limit.'],['Test sırasında sıcaklık arttı','The temperature went up during the test.'],['Arızalı modülü buldun','We found a faulty module.'],['Yük altında oldu','It happened under load.'],['Parçayı değiştirip tekrar test ettin','We replaced the part and ran the test again.']],
+ [['Şu an ne yaptığını söyle',"I'm currently working on the pack test."],['Ne test edip ne bulduğunu söyle','We tested ten cells and found two outliers.'],['Sonuçları özetle','The results show a clear trend.'],['Spec içinde',"It's within spec."],['Spec dışında',"It's out of spec."],['Daha fazla veri gerek','We need more data to be sure.'],['Sonraki adım','The next step is to repeat the test.'],['Teslim zamanı','It should be done by Friday.'],['Bir sorunla karşılaştın','We ran into a problem with the charger.'],['Test hâlâ sürüyor','The test is still running.'],['Test geçti','The test passed.'],['Test neden başarısız oldu','The test failed because the temperature was too high.']],
+ [['Katılıyorsun','I agree with that.'],['Nazikçe itiraz et',"I see your point, but I'm a bit concerned about the risk."],['Söz almak için','Can I add something?'],['Fikrini sor','What do you think?'],['Mantıklı bulduğunu söyle','That makes sense.'],['Ekran paylaşırken','Let me share my screen.'],['Ekranı görüp görmediklerini sor','Can everyone see my screen?'],['Toplantıyı özetle','To summarize, we need two more tests.'],['Soru var mı','Any questions?'],['E-postayla devam et',"Let's follow up by email."],['Ek toplantı öner','Could we schedule a follow-up meeting?'],['Rapor gönderme sözü',"I'll send you the report by the end of the day."]]
+];
+var CARDS=[];
+RAW.forEach(function(wk,wi){wk.forEach(function(c,i){CARDS.push({id:'w'+(wi+1)+'-'+(i+1),w:wi+1,tr:c[0],en:c[1]})})});
+var NEWMAX=8;
+
+var STEPS_LISTEN=['İlk 2 dakikayı altyazısız dinle, sadece ana fikri yakala.','İngilizce altyazıyı aç (CC) ve aynı 2 dakikayı tekrar dinle.','Anlamadığın 3-5 cümleyi durdurarak yaz. Türkçeye çevirmeye çalışma.','Bunlardan 3 kalıbı Kartlar sekmesinden kendi kartlarına ekle.'];
+var STEPS_SHADOW=['1-2 dakikalık, net konuşulan bir bölüm seç. Hızı 0,75x yap (YouTube ayarlarında Oynatma hızı).','Bir kez altyazıyla dinle ve metni oku.','Cümle cümle durdur. Ses tonunu ve vurguyu taklit ederek her cümleyi 3 kez tekrar et.','Hızı 1x yap ve konuşmacıyla aynı anda söyle.','Telefonun ses kaydedicisiyle kendini kaydet, orijinalle karşılaştır. En çok ayrışan 2 cümleyi tekrar et.','Aynı bölümü 3 gün üst üste çalış. Yeni bölüm aramana gerek yok.'];
+var STEPS_SPEAK=['1 dakika hazırlan: konuyla ilgili 4 anahtar kelime yaz. Cümleyi Türkçe kurma.','Telefonun ses kaydedicisini aç ve 1-2 dakika durmadan konuş. Takılırsan "Let me think…" de ve devam et.','Kaydı dinle ve takıldığın yerleri işaretle.','Aşağıdaki "Konuşmanı düzelt" kutusuna söylediğini yaz, Gemini düzeltsin. Sonra toplantı simülasyonunda pratik yap.','En önemli 3 hatayı hata defterine ekle.'];
+
+var PROMPT_VOICE="You are my English speaking coach. My level is B1. I am a battery test engineer. Ask me one short question at a time about my work: tests, problems, results, meetings. Wait for my answer. After each answer: 1) tell me one thing I did well, 2) correct my biggest mistake with the right sentence, 3) ask the next question. Speak slowly and use simple words. Do not explain in Turkish unless I ask.";
+var PROMPT_TEXT="Here is the text of my English speaking practice (level B1). Please: 1) list my 3 most important mistakes with corrected sentences, 2) rewrite my text in natural, simple English, 3) give me 3 useful phrases to memorize. Explain briefly in Turkish.\n\nMy text:\n";
+
+/* ---------- durum ve kayıt ---------- */
+function blank(){return {v:1,start:TODAY(),done:{},cards:{},custom:[],mistakes:[],reviews:{},intro:{},updated:0}}
+function norm(r){var b=blank();for(var k in b){if(r&&r[k]!==undefined)b[k]=r[k]}return b}
+function lsLoad(){try{var r=localStorage.getItem('fluentcell');return r?JSON.parse(r):null}catch(e){return null}}
+function lsSave(){try{localStorage.setItem('fluentcell',JSON.stringify(S))}catch(e){}}
+var S=norm(lsLoad());
+var status='Bu cihaza kaydediliyor';
+function save(){S.updated=Date.now();lsSave()}
+function setStatus(t){status=t;var el=document.querySelector('#status');if(el)el.textContent=t}
+
+/* ---------- plan ---------- */
+function dayInfo(ds){var n=Math.max(1,diffDays(ds,S.start)+1);var idx=Math.floor((n-1)/7);return {n:n,idx:idx,wk:idx%4,cycle:Math.floor(idx/4)+1,week:WEEKS[idx%4]}}
+function planFor(ds){
+  var wd=parse(ds).getDay();
+  var B={
+   speak:{id:'speak',t:'Konuşma',m:15,tab:'konus',d:'Günün konusunu sesli anlat, kaydet, düzelt.'},
+   tutor:{id:'speak',t:'Tutor dersi',m:30,tab:'konus',d:'italki veya Preply ile 30 dk sohbet. Gramer değil konuşma iste.'},
+   prova:{id:'speak',t:'Toplantı provası',m:15,tab:'konus',d:'2 dakikalık sunumu kaydet ve dinle.'},
+   shadow:{id:'shadow',t:'Shadowing',m:15,tab:'video',sub:'shadow',d:'Kısa bir videoyu cümle cümle taklit et.'},
+   listen:{id:'listen',t:'Dinleme',m:15,tab:'video',sub:'listen',d:'İngilizce altyazılı video, 3-5 kalıp not al.'},
+   cards:{id:'cards',t:'Kartlar',m:15,tab:'kartlar',d:'Aralıklı tekrar: bekleyen ve yeni kalıplar.'},
+   review:{id:'review',t:'Haftayı değerlendir',m:10,tab:'konus',d:'Hata defterini gözden geçir, haftanın en zor anını konuş.'}
+  };
+  var L=function(m){var x=Object.assign({},B.listen);x.m=m;return x};
+  var C=function(m){var x=Object.assign({},B.cards);x.m=m;return x};
+  if(wd===0)return [L(20),C(10),B.review];
+  if(wd===4)return [B.tutor,C(15),L(15)];
+  if(wd===6)return [B.prova,B.shadow,B.listen,B.cards];
+  return [B.speak,B.shadow,B.listen,B.cards];
+}
+function promptFor(ds){var wd=parse(ds).getDay();var di=dayInfo(ds);return di.week.prompts[wd]||DEF[wd]||DEF[0]}
+function doneOf(ds){return S.done[ds]||[]}
+function streak(){var d=TODAY();var ok=function(x){return doneOf(x).length>=2};if(!ok(d))d=addDays(d,-1);var c=0;while(ok(d)){c++;d=addDays(d,-1)}return c}
+
+/* ---------- kartlar ---------- */
+var Q=null, showAns=false, Qdate=null;
+function allCards(){return CARDS.concat(S.custom)}
+function unlocked(){var wk=Math.min(dayInfo(TODAY()).idx,3)+1;return allCards().filter(function(c){return !c.w||c.w<=wk})}
+function counts(){var t=TODAY(),u=unlocked();var due=u.filter(function(c){return S.cards[c.id]&&S.cards[c.id].due<=t}).length;var fresh=u.filter(function(c){return !S.cards[c.id]}).length;var left=Math.max(0,NEWMAX-(S.intro[t]||0));return {due:due,fresh:Math.min(fresh,left),total:u.length,learned:u.filter(function(c){return S.cards[c.id]&&S.cards[c.id].int>=7}).length}}
+function buildQueue(){
+  var t=TODAY(),u=unlocked();
+  var due=u.filter(function(c){return S.cards[c.id]&&S.cards[c.id].due<=t}).sort(function(a,b){return S.cards[a.id].due.localeCompare(S.cards[b.id].due)}).map(function(c){return c.id});
+  var left=Math.max(0,NEWMAX-(S.intro[t]||0));
+  var fresh=u.filter(function(c){return !S.cards[c.id]}).slice(0,left).map(function(c){return c.id});
+  Qdate=t;return due.concat(fresh);
+}
+function cardById(id){return allCards().filter(function(c){return c.id===id})[0]}
+function nextState(c,q){
+  var ease=c.ease,it=c.int,reps=c.reps,lap=c.lapses,ni,ne=ease,nr=reps,nl=lap;
+  if(q===0){ni=0;ne=Math.max(1.3,ease-.2);nr=0;nl=lap+1}
+  else if(q===1){ni=Math.max(1,Math.round((it||1)*1.2));ne=Math.max(1.3,ease-.15);nr=reps+1}
+  else if(q===2){ni=reps===0?1:(reps===1?3:Math.round(it*ease));nr=reps+1}
+  else{ni=reps===0?3:(reps===1?6:Math.round(it*ease*1.3));ne=ease+.15;nr=reps+1}
+  return {card:{ease:ne,int:ni,reps:nr,lapses:nl,due:addDays(TODAY(),ni)},ni:ni};
+}
+var FRESH={ease:2.5,int:0,reps:0,lapses:0,due:null};
+function lbl(ni){return ni===0?'şimdi':ni+' gün'}
+function rate(q){
+  var id=Q[0],t=TODAY(),isNew=!S.cards[id];
+  var n=nextState(S.cards[id]||FRESH,q);
+  S.cards[id]=n.card;Q.shift();
+  if(q===0)Q.splice(Math.min(3,Q.length),0,id);
+  S.reviews[t]=(S.reviews[t]||0)+1;
+  if(isNew)S.intro[t]=(S.intro[t]||0)+1;
+  showAns=false;save();
+}
+function say(t){try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.85;window.speechSynthesis.speak(u)}catch(e){toast('Ses bu cihazda çalışmıyor')}}
+
+/* ---------- zamanlayıcı ---------- */
+var T=null;
+function fmt(ms){var s=Math.ceil(ms/1000);return pad(Math.floor(s/60))+':'+pad(s%60)}
+setInterval(function(){
+  if(!T)return;
+  var left=Math.max(0,T.end-Date.now());
+  var els=document.querySelectorAll('[data-timer]');
+  for(var i=0;i<els.length;i++)els[i].textContent=fmt(left);
+  if(left===0&&!T.fin){T.fin=true;toast('Süre doldu. Bloğu bitirdiysen işaretle.');render()}
+},500);
+
+/* ---------- görünümler ---------- */
+var V={tab:'today',sub:'listen'};
+var TABS=[['today','Bugün'],['kartlar','Kartlar'],['video','Video'],['konus','Konuş']];
+
+function topbar(){
+  var di=dayInfo(TODAY());
+  return '<header class="top"><span class="brand">FluentCell</span><span class="rt"><span class="mono">GÜN '+di.n+' · HAFTA '+(di.idx+1)+'</span><button class="gear" data-a="tab" data-tab="ayarlar" aria-label="Ayarlar">'+IC.gear+'</button></span></header>';
+}
+
+function blockBar(tab,sub){
+  var ds=TODAY();
+  var p=planFor(ds).filter(function(b){return b.tab===tab&&(!b.sub||b.sub===sub)})[0];
+  if(!p)return '';
+  var isDone=doneOf(ds).indexOf(p.id)>-1;
+  if(isDone)return '<div class="bar done"><div><div class="lbl">Bugünkü blok</div><b>'+esc(p.t)+' tamamlandı</b></div><div class="timer" aria-hidden="true">'+IC.check.replace('width="16" height="16"','width="28" height="28"')+'</div><div class="row"><button class="btn sm ghost" data-a="toggle" data-id="'+p.id+'">Geri al</button></div></div>';
+  var run=T&&T.id===p.id;
+  var left=run?Math.max(0,T.end-Date.now()):p.m*60000;
+  return '<div class="bar"><div><div class="lbl">Bugünkü blok</div><b>'+esc(p.t)+' · '+p.m+' dk</b></div><div class="timer" data-timer>'+fmt(left)+'</div><div class="row">'+
+    '<button class="btn sm '+(run?'':'pri')+'" data-a="timer" data-id="'+p.id+'" data-m="'+p.m+'">'+(run?'Sayacı durdur':'Sayacı başlat')+'</button>'+
+    '<button class="btn sm" data-a="toggle" data-id="'+p.id+'">Bitirdim</button></div></div>';
+}
+
+function vToday(){
+  var ds=TODAY(),di=dayInfo(ds),plan=planFor(ds),done=doneOf(ds),dt=parse(ds);
+  var n=plan.filter(function(b){return done.indexOf(b.id)>-1}).length,total=plan.length,pct=Math.round(n/total*100);
+  var on=Math.round(pct/10),col=pct>=100?'var(--ok)':(pct>=50?'var(--accent)':'var(--warn)');
+  var c=counts();
+  var rows=plan.map(function(b){
+    var d=done.indexOf(b.id)>-1;
+    var desc=b.id==='cards'?(c.due+' tekrar + '+c.fresh+' yeni kart'):b.d;
+    return '<div class="blk '+(d?'is-done':'')+'"><button class="chk" data-a="toggle" data-id="'+b.id+'" aria-pressed="'+d+'" aria-label="'+esc(b.t)+' tamamlandı">'+(d?IC.check:'')+'</button>'+
+      '<div><h3>'+esc(b.t)+'</h3><p>'+esc(desc)+'</p></div>'+
+      '<div class="blk-r"><span class="mono">'+b.m+' DK</span><button class="btn sm" data-a="start" data-id="'+b.id+'" data-tab="'+b.tab+'" data-sub="'+(b.sub||'')+'" data-m="'+b.m+'">'+(d?'Aç':'Başla')+'</button></div></div>';
+  }).join('');
+  var cells='';for(var i=0;i<10;i++)cells+='<i class="'+(i<on?'on':'')+'"></i>';
+  var hist='';
+  for(var k=6;k>=0;k--){var d2=addDays(ds,-k),dn=doneOf(d2).length,pl=planFor(d2).length;var cl=dn>=pl?'full':(dn>=2?'part':'');hist+='<div class="'+cl+(k===0?' now':'')+'"><i></i><span>'+DS[parse(d2).getDay()]+'</span></div>'}
+  var pr=promptFor(ds);
+  return topbar()+
+   '<section class="card"><div class="read"><div><div class="lbl">'+DAYS[dt.getDay()]+', '+dt.getDate()+' '+MONTHS[dt.getMonth()]+'</div><div class="lbl" style="margin-top:6px">Günlük şarj (SoC)</div></div><div class="big">'+pct+'<small>%</small></div></div>'+
+   '<div class="soc"><div class="cells" style="--soc:'+col+'">'+cells+'</div><div class="nub"></div></div>'+
+   '<div class="meta"><span><b>'+n+' / '+total+'</b> blok</span><span>Döngü <b>'+streak()+'</b> gün</span><span>Gün sayılması için en az <b>2</b> blok</span></div></section>'+
+   '<section class="card"><div class="lbl">Bugünün planı</div>'+rows+'</section>'+
+   '<section class="card"><div class="lbl">Bugünün konuşma konusu</div><p style="margin-top:8px;font-weight:500">'+esc(pr.tr)+'</p><div class="say">'+esc(pr.en)+'</div><div class="row" style="margin-top:12px"><button class="btn sm" data-a="tab" data-tab="konus">Konuşmaya git</button></div></section>'+
+   '<section class="card"><div class="lbl">Hafta '+(di.idx+1)+(di.cycle>1?' · tekrar turu '+di.cycle:'')+' hedefi</div><h2 style="margin-top:6px">'+esc(di.week.title)+'</h2><p class="sub">'+esc(di.week.goal)+'</p></section>'+
+   '<section class="card"><div class="lbl" style="margin-bottom:10px">Son 7 gün</div><div class="hist">'+hist+'</div></section>'+
+   '<div class="foot"><span id="status">'+esc(status)+'</span><span>'+(aiReady()?'Gemini bağlı':'Gemini bağlı değil')+'</span></div>';
+}
+
+function vCards(){
+  if(!Q||Qdate!==TODAY()){Q=buildQueue();showAns=false}
+  var c=counts();
+  var stats='<div class="stats"><div class="stat"><div class="lbl">Tekrar</div><div class="n">'+c.due+'</div></div><div class="stat"><div class="lbl">Yeni</div><div class="n">'+c.fresh+'</div></div><div class="stat"><div class="lbl">Oturan</div><div class="n">'+c.learned+'<small style="font-size:14px;color:var(--mute)">/'+c.total+'</small></div></div></div>';
+  var body;
+  if(Q.length===0){
+    body='<section class="card fc"><div><div class="lbl">Seans bitti</div><h2 style="margin-top:8px">Bugünkü kartlar tamam.</h2><p class="sub">Bugün '+(S.reviews[TODAY()]||0)+' kart çalıştın. Yeni kartlar yarın ve yeni hafta başında açılır.</p></div><div class="row"><button class="btn pri" data-a="tab" data-tab="today" data-finish="cards">Kartlar bloğunu bitir</button><button class="btn" data-a="requeue">Yeniden tara</button></div></section>';
+  }else{
+    var card=cardById(Q[0]);
+    var st=S.cards[Q[0]]||FRESH;
+    var isNew=!S.cards[Q[0]];
+    if(!showAns){
+      body='<section class="card fc"><div><div class="lbl">'+(isNew?'Yeni kart':'Tekrar')+' · kalan '+Q.length+'</div><p class="front" style="margin-top:12px">'+esc(card.tr)+'</p><p class="sub" style="margin-top:12px">Önce İngilizcesini sesli söyle, sonra cevabı aç.</p></div><button class="btn pri" data-a="reveal">Cevabı göster</button></section>';
+    }else{
+      var opts=[['Tekrar',0],['Zor',1],['İyi',2],['Kolay',3]].map(function(o){return '<button data-a="rate" data-q="'+o[1]+'">'+o[0]+'<small>'+lbl(nextState(st,o[1]).ni)+'</small></button>'}).join('');
+      body='<section class="card fc"><div><div class="lbl">'+esc(card.tr)+'</div><p class="en" style="margin-top:12px">'+esc(card.en)+'</p><div class="row" style="margin-top:12px">'+(window.speechSynthesis?'<button class="ico" data-a="speak" data-text="'+esc(card.en)+'" aria-label="Dinle">'+IC.spk+'</button>':'')+'<span class="sub">Sesli tekrar et, sonra dürüstçe puanla.</span></div></div><div class="rate">'+opts+'</div></section>';
+    }
+  }
+  var browse=unlocked().map(function(cd){var s=S.cards[cd.id];var tag=!s?'yeni':(s.int>=7?'oturdu':'öğreniyor');return '<li><span>'+esc(cd.en)+'</span><span class="tag">'+tag+'</span></li>'}).join('');
+  return topbar()+blockBar('kartlar')+stats+body+
+   aiGenCard()+
+   '<section class="card"><details><summary>Kendi kalıbını ekle</summary><p class="sub">Dinlerken veya işte duyduğun bir kalıbı yaz. Kart bugünden itibaren sıraya girer.</p><label for="c-tr">Durum (Türkçe)</label><input type="text" id="c-tr" autocomplete="off" placeholder="Örn. Birinden bir dakika iste"><label for="c-en">İngilizce cümle</label><input type="text" id="c-en" autocomplete="off" placeholder="Örn. Give me a minute, please."><div class="row" style="margin-top:12px"><button class="btn pri" data-a="addcard">Kartı ekle</button></div></details></section>'+
+   '<section class="card"><details><summary>Açık kartlar ('+unlocked().length+')</summary><ul class="list">'+browse+'</ul></details></section>';
+}
+
+function resList(arr){
+  return '<div class="res">'+arr.map(function(r){
+    var u=r.url||('https://www.youtube.com/results?search_query='+encodeURIComponent(r.q));
+    return '<a class="item" href="'+esc(u)+'" target="_blank" rel="noopener"><div><b>'+esc(r.n)+'</b><span class="w">'+esc(r.why)+'</span></div><span class="go">'+(r.url?'AÇ ↗':'ARA ↗')+'</span></a>';
+  }).join('')+'</div>';
+}
+function steps(a){return '<ol class="steps">'+a.map(function(s){return '<li><span>'+esc(s)+'</span></li>'}).join('')+'</ol>'}
+
+function vVideo(){
+  var di=dayInfo(TODAY()),wk=di.week,listen=V.sub!=='shadow';
+  var seg='<div class="seg" role="group" aria-label="Video türü"><button data-a="sub" data-sub="listen" aria-pressed="'+listen+'">Dinleme</button><button data-a="sub" data-sub="shadow" aria-pressed="'+!listen+'">Shadowing</button></div>';
+  var note='<p class="sub" style="margin-top:10px">Bağlantılar YouTube arama sayfasını açar. İlk sonuçlardan net konuşulan, 5-10 dakikalık birini seç.</p>';
+  var main=listen
+   ?'<section class="card"><div class="lbl">Pasif dinleme · hafta '+(di.idx+1)+'</div><h2 style="margin-top:6px">'+esc(wk.title)+'</h2><p class="sub">Hepsini anlaman gerekmiyor. Amaç kulağı İngilizcenin hızına ve ritmine alıştırmak.</p>'+steps(STEPS_LISTEN)+'<div class="row" style="margin-top:14px"><button class="btn sm" data-a="tab" data-tab="kartlar">Kartlara kalıp ekle</button></div></section>'+aiDecodeCard()+'<section class="card"><div class="lbl" style="margin-bottom:6px">Bu hafta dinlenecekler</div>'+resList(wk.listen)+note+'</section>'
+   :'<section class="card"><div class="lbl">Shadowing · hafta '+(di.idx+1)+'</div><h2 style="margin-top:6px">Duy, taklit et, kaydet</h2><p class="sub">Konuşma hızını ve ritmini kazandıran en etkili çalışma. Her gün yeni video yerine aynı bölümü 3 gün çalış.</p>'+steps(STEPS_SHADOW)+'</section><section class="card"><div class="lbl" style="margin-bottom:6px">Bu hafta shadowing için</div>'+resList(wk.shadow)+note+'</section>';
+  return topbar()+blockBar('video',V.sub)+seg+main;
+}
+
+function vKonus(){
+  var ds=TODAY(),pr=promptFor(ds),wd=parse(ds).getDay();
+  var m=S.mistakes.filter(function(x){return !x.ok});
+  var mh=m.length?m.slice().reverse().slice(0,8).map(function(x){return '<div class="mist"><div class="w">'+esc(x.wrong)+'</div><div class="r">'+esc(x.right)+'</div><div class="row" style="margin-top:8px"><button class="btn sm" data-a="mtocard" data-id="'+x.id+'">Karta çevir</button><button class="btn sm ghost" data-a="mok" data-id="'+x.id+'">Oturdu</button><button class="btn sm ghost" data-a="mdel" data-id="'+x.id+'">Sil</button></div></div>'}).join(''):'<p class="sub">Henüz hata yok. Her kayıttan sonra en önemli 3 hatayı buraya ekle.</p>';
+  var head=wd===4?'Tutor dersi konusu':(wd===6?'Toplantı provası':'Bugünün konusu');
+  return topbar()+blockBar('konus')+
+   '<section class="card"><div class="lbl">'+head+'</div><h2 style="margin-top:6px">'+esc(pr.tr)+'</h2><div class="say">'+esc(pr.en)+'</div>'+steps(STEPS_SPEAK)+'</section>'+
+   aiFixCard()+aiMeetCard()+
+   '<section class="card"><details><summary>Sesli pratik (Gemini veya Claude uygulaması)</summary><p class="sub">Telefonundaki Gemini Live ya da Claude sesli modunu aç, bu istemi ilk mesaj olarak gönder.</p><label for="p-voice">Hazır istem</label><textarea id="p-voice" rows="6" readonly>'+esc(PROMPT_VOICE)+'</textarea><div class="row" style="margin-top:10px"><button class="btn pri" data-a="copy" data-target="p-voice">Kopyala</button></div></details></section>'+
+   '<section class="card"><div class="lbl">Hata defteri</div><h2 style="margin-top:6px">Tekrar eden hatalar</h2>'+mh+'<details style="margin-top:8px"><summary>Hata ekle</summary><label for="m-w">Yanlış söylediğin</label><input type="text" id="m-w" autocomplete="off" placeholder="Örn. I am agree with you"><label for="m-r">Doğrusu</label><input type="text" id="m-r" autocomplete="off" placeholder="Örn. I agree with you"><div class="row" style="margin-top:12px"><button class="btn pri" data-a="addm">Ekle</button></div></details></section>';
+}
+
+/* ---------- yapay zeka (Gemini) ---------- */
+var AIK='fluentcell-ai';
+function aiCfg(){try{return JSON.parse(localStorage.getItem(AIK))||{}}catch(e){return {}}}
+function aiSetCfg(c){try{localStorage.setItem(AIK,JSON.stringify(c))}catch(e){}}
+function aiReady(){return !!aiCfg().key}
+var A={busy:{},err:{},ok:{},draft:{},fix:null,gen:null,dec:null,meet:{role:'mudur',msgs:[],sum:null},models:null};
+var LEARNER='The learner is Engin, a Turkish battery test engineer working in R&D (testing battery packs, finding and fixing faulty cells, modules and BMS issues). His English level is B1. His goal is to understand and answer in work meetings and talk about his work. Use simple, natural, spoken workplace English (A2-B1 vocabulary). Write every Turkish explanation in short, plain Turkish.';
+var ROLES={
+  mudur:{n:'Müdür · haftalık durum',d:'Ar-Ge müdürün haftalık toplantıda ne test ettiğini, sorunları ve sonraki adımları soruyor.',sys:'You are his R&D manager in a weekly status meeting. Ask about his tests this week, problems, results, risks and next steps.'},
+  tedarikci:{n:'Tedarikçi · hücre sorunu',d:'Hücre tedarikçisiyle kalite sorunu görüşmesi. Veri istiyor, itiraz ediyor.',sys:'You are a quality engineer from the cell supplier. He reported weak cells. You ask for data (voltage, capacity, internal resistance, temperature), push back politely, and discuss next steps.'},
+  musteri:{n:'Müşteri · test sonucu',d:'Müşteri batarya paketinin test sonuçlarını ve teslim tarihini soruyor.',sys:'You are a customer engineer asking about the test results of a battery pack you will buy: whether it is within spec, what failed, when it will be ready.'},
+  mulakat:{n:'İş görüşmesi',d:'Yabancı bir şirketle mülakat: deneyimin, projelerin, Formula Student.',sys:'You are interviewing him for a battery test engineer job at an international company. Ask about his experience, a problem he solved, his projects and why he wants the job.'}
+};
+function recentMistakes(){return S.mistakes.filter(function(x){return !x.ok}).slice(-5).map(function(x){return '"'+x.wrong+'" -> "'+x.right+'"'}).join('; ')}
+
+function gemReq(path,opt){
+  var c=aiCfg();
+  if(!c.key)return Promise.reject(new Error('Önce Ayarlar\'dan Gemini API anahtarını gir.'));
+  opt=opt||{};opt.headers=Object.assign({'x-goog-api-key':c.key},opt.headers||{});
+  return fetch('https://generativelanguage.googleapis.com/v1beta/'+path,opt).then(function(r){
+    return r.json().catch(function(){return {}}).then(function(j){
+      if(!r.ok){
+        var m=(j.error&&j.error.message)||('HTTP '+r.status);
+        if(r.status===400&&/API key/i.test(m))m='API anahtarı geçersiz. Ayarlar\'dan kontrol et.';
+        else if(r.status===403)m='Bu anahtarın Gemini API izni yok ya da kısıtlı. ('+m+')';
+        else if(r.status===429)m='Kullanım limiti doldu. Biraz bekleyip tekrar dene.';
+        else if(r.status===404)m='Model bulunamadı. Ayarlar\'dan "Modelleri yükle" ile yeni model seç.';
+        throw new Error(m);
+      }
+      return j;
+    });
+  },function(){throw new Error('Gemini\'ye ulaşılamadı. İnternet bağlantını kontrol et.')});
+}
+function rankModel(n){var m=n.match(/gemini-(\d+(?:\.\d+)?)/);var v=m?parseFloat(m[1]):0;var pen=/preview|exp|latest/.test(n)?0.05:0;return v-pen}
+function loadModels(){
+  return gemReq('models?pageSize=200').then(function(j){
+    var list=(j.models||[]).filter(function(m){
+      var n=m.name||'';
+      return (m.supportedGenerationMethods||[]).indexOf('generateContent')>-1&&/gemini/.test(n)&&!/embedding|image|tts|audio|live|vision|aqa|robotics|computer/.test(n);
+    }).map(function(m){return m.name.replace('models/','')});
+    list.sort(function(a,b){return rankModel(b)-rankModel(a)});
+    return list;
+  });
+}
+function pickDefault(list){
+  var f=list.filter(function(n){return /flash/.test(n)&&!/lite/.test(n)&&!/preview|exp/.test(n)});
+  if(!f.length)f=list.filter(function(n){return /flash/.test(n)});
+  return f[0]||list[0];
+}
+function ensureModel(){
+  var c=aiCfg();if(c.model)return Promise.resolve(c.model);
+  return loadModels().then(function(l){var m=pickDefault(l);if(!m)throw new Error('Kullanılabilir Gemini modeli bulunamadı.');c=aiCfg();c.model=m;aiSetCfg(c);A.models=l;return m});
+}
+function gem(system,contents,json){
+  return ensureModel().then(function(model){
+    var body={systemInstruction:{parts:[{text:system}]},contents:contents,generationConfig:{temperature:json?0.4:0.8}};
+    if(json)body.generationConfig.responseMimeType='application/json';
+    return gemReq('models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  }).then(function(j){
+    var c=j.candidates&&j.candidates[0];
+    if(!c||!c.content){var why=(j.promptFeedback&&j.promptFeedback.blockReason)||(c&&c.finishReason)||'boş cevap';throw new Error('Gemini cevap vermedi ('+why+'). Tekrar dene.')}
+    var t=(c.content.parts||[]).filter(function(p){return !p.thought&&p.text}).map(function(p){return p.text}).join('');
+    if(!json)return t;
+    t=t.trim().replace(/^```(?:json)?\s*/i,'').replace(/```$/,'').trim();
+    try{return JSON.parse(t)}catch(e){throw new Error('Cevap okunamadı. Tekrar dene.')}
+  });
+}
+function user(t){return {role:'user',parts:[{text:t}]}}
+function run(key,p,done){
+  A.busy[key]=true;A.err[key]='';render();
+  p.then(function(r){A.busy[key]=false;done(r);render()},function(e){A.busy[key]=false;A.err[key]=e.message||String(e);render()});
+}
+
+/* --- ortak parçalar --- */
+function needKey(){return '<p class="sub" style="margin-top:8px">Bu özellik için Gemini API anahtarı gerekiyor.</p><div class="row" style="margin-top:10px"><button class="btn pri" data-a="tab" data-tab="ayarlar">Anahtarı ekle</button></div>'}
+function ta(id,rows,ph){return '<textarea id="'+id+'" rows="'+rows+'" placeholder="'+esc(ph)+'" data-draft>'+esc(A.draft[id]||'')+'</textarea>'}
+function goBtn(a,label,key){return '<button class="btn pri" data-a="'+a+'" '+(A.busy[key]?'disabled':'')+'>'+(A.busy[key]?'<span class="spin"></span> Gemini düşünüyor':label)+'</button>'}
+function errBox(k){return A.err[k]?'<p class="err">'+esc(A.err[k])+'</p>':''}
+function hasCard(en){var l=en.trim().toLowerCase();return allCards().some(function(c){return c.en.trim().toLowerCase()===l})}
+function phraseRows(list,src){
+  return list.map(function(p,i){var have=hasCard(p.en);return '<div class="ph"><div><b>'+esc(p.en)+'</b><span>'+esc(p.tr)+'</span></div><div class="row">'+(window.speechSynthesis?'<button class="ico" data-a="speak" data-text="'+esc(p.en)+'" aria-label="Dinle">'+IC.spk+'</button>':'')+'<button class="btn sm" data-a="ai-addcard" data-src="'+src+'" data-i="'+i+'" '+(have?'disabled':'')+'>'+(have?'Eklendi':'Karta ekle')+'</button></div></div>'}).join('');
+}
+function addCard(tr,en){if(hasCard(en))return false;S.custom.push({id:'c'+Date.now()+Math.floor(Math.random()*1000),tr:tr,en:en});Q=null;return true}
+function addMistake(w,r){if(S.mistakes.some(function(x){return x.wrong===w&&x.right===r}))return false;S.mistakes.push({id:'m'+Date.now()+Math.floor(Math.random()*1000),wrong:w,right:r,ok:false});return true}
+
+/* --- 1. konuşma düzeltme --- */
+function aiFixCard(){
+  var h='<section class="card"><div class="row between"><div class="lbl">Konuşmanı düzelt</div><span class="ai-tag">Gemini</span></div><h2 style="margin-top:6px">Kaydını yaz, düzeltilsin</h2>';
+  if(!aiReady())return h+needKey()+'</section>';
+  h+='<p class="sub">Kaydı dinle ve söylediğini olduğu gibi yaz, hataları düzeltme. Telefon klavyesinin mikrofonuyla İngilizce dikte de edebilirsin.</p>'+ta('ai-fix',5,'Today I tested a battery pack. One cell voltage was more low than others...')+'<div class="row" style="margin-top:10px">'+goBtn('ai-fix','Düzelt','fix')+'</div>'+errBox('fix');
+  var r=A.fix;
+  if(r){
+    h+='<div class="out">';
+    if(r.score)h+='<div class="row between"><h3>Değerlendirme</h3><span class="mono" style="font-weight:700">'+esc(r.score)+'/10</span></div>';
+    if(r.good_tr)h+='<p style="color:var(--ok)">'+esc(r.good_tr)+'</p>';
+    if(r.mistakes&&r.mistakes.length){
+      h+='<h3>En önemli hatalar</h3>'+r.mistakes.map(function(m){return '<div class="mist" style="border-top:1px solid var(--line)"><div class="w">'+esc(m.wrong)+'</div><div class="r">'+esc(m.right)+'</div><div class="why">'+esc(m.why_tr||'')+'</div></div>'}).join('')+'<div class="row"><button class="btn sm" data-a="ai-fix-mist">Hatalar deftere ekle</button></div>';
+    }
+    if(r.natural)h+='<h3>Doğal söyleyiş</h3><div class="say" style="margin-top:0">'+esc(r.natural)+'</div>'+(window.speechSynthesis?'<div class="row"><button class="btn sm" data-a="speak" data-text="'+esc(r.natural)+'">'+IC.spk+' Dinle</button></div>':'');
+    if(r.phrases&&r.phrases.length)h+='<h3>Ezberlenecek kalıplar</h3><div>'+phraseRows(r.phrases,'fix')+'</div>';
+    h+='</div>';
+  }
+  return h+'</section>';
+}
+function doFix(){
+  var t=(A.draft['ai-fix']||'').trim();if(t.length<10){A.err.fix='Biraz daha uzun bir metin yaz (en az bir iki cümle).';render();return}
+  var pr=promptFor(TODAY());
+  var sys=LEARNER+' You correct his spoken English. The text is a transcript of his speech, so ignore punctuation and capitalization. Return ONLY JSON: {"score": integer 1-10 for how clear and correct it is, "good_tr": one sentence in Turkish about what he did well, "mistakes": [up to 3 most important mistakes, each {"wrong": exact short part he said, "right": corrected version, "why_tr": short Turkish reason}], "natural": his whole text rewritten in natural simple spoken English, "phrases": [3 useful phrases from the natural version to memorize, each {"en": phrase, "tr": Turkish situation/meaning}]}. Prioritize mistakes that would confuse a listener in a meeting. Known recurring mistakes: '+(recentMistakes()||'none');
+  run('fix',gem(sys,[user('Topic: '+pr.tr+'\n\nMy speech:\n'+t)],true),function(r){A.fix=r});
+}
+
+/* --- 2. toplantı simülasyonu --- */
+function aiMeetCard(){
+  var M=A.meet,R=ROLES[M.role];
+  var h='<section class="card"><div class="row between"><div class="lbl">Toplantı simülasyonu</div><span class="ai-tag">Gemini</span></div><h2 style="margin-top:6px">Gerçek toplantı gibi cevap ver</h2>';
+  if(!aiReady())return h+needKey()+'</section>';
+  if(!M.msgs.length){
+    h+='<label for="ai-role">Senaryo</label><select id="ai-role">'+Object.keys(ROLES).map(function(k){return '<option value="'+k+'" '+(k===M.role?'selected':'')+'>'+esc(ROLES[k].n)+'</option>'}).join('')+'</select><p class="sub" style="margin-top:8px">'+esc(R.d)+' Her cevabından sonra kısa geri bildirim ve daha iyi söyleyişi görürsün.</p><div class="row" style="margin-top:12px">'+goBtn('ai-meet-start','Toplantıyı başlat','meet')+'</div>'+errBox('meet');
+    return h+'</section>';
+  }
+  h+='<p class="sub">'+esc(R.n)+'</p><div class="chat">';
+  M.msgs.forEach(function(m){
+    if(m.role==='user')h+='<div class="msg me">'+esc(m.text)+'</div>';
+    else h+='<div class="msg bot">'+(m.fb?'<div class="fb">'+esc(m.fb)+'</div>':'')+(m.better?'<div class="better">Daha iyi: '+esc(m.better)+'</div>':'')+'<div class="q">'+esc(m.q)+'</div>'+(window.speechSynthesis?'<div class="row" style="margin-top:6px"><button class="btn sm ghost" data-a="speak" data-text="'+esc(m.q)+'">'+IC.spk+' Dinle</button></div>':'')+'</div>';
+  });
+  h+='</div>';
+  if(M.sum){
+    h+='<div class="out"><h3>Toplantı özeti</h3><p>'+esc(M.sum.summary_tr||'')+'</p>'+(M.sum.mistakes||[]).map(function(m){return '<div class="mist" style="border-top:1px solid var(--line)"><div class="w">'+esc(m.wrong)+'</div><div class="r">'+esc(m.right)+'</div></div>'}).join('')+'<div class="row">'+((M.sum.mistakes||[]).length?'<button class="btn sm" data-a="ai-meet-mist">Hataları deftere ekle</button>':'')+'<button class="btn sm pri" data-a="ai-meet-reset">Yeni toplantı</button></div></div>';
+  }else{
+    var turns=M.msgs.filter(function(m){return m.role==='user'}).length;
+    h+='<label for="ai-reply">Cevabın (İngilizce)</label>'+ta('ai-reply',3,'Type or dictate your answer...')+'<div class="row" style="margin-top:10px">'+goBtn('ai-meet-send','Gönder','meet')+'<button class="btn" data-a="ai-meet-end" '+(A.busy.meet||turns<2?'disabled':'')+'>Bitir ve özetle</button><button class="btn ghost sm" data-a="ai-meet-reset">İptal</button></div>'+errBox('meet');
+  }
+  return h+'</section>';
+}
+function meetSys(){
+  var di=dayInfo(TODAY());
+  return LEARNER+' You run a realistic spoken work meeting with him. '+ROLES[A.meet.role].sys+' This week his study focus is: '+di.week.title+'. Ask ONE short question at a time (max 20 words), like a real person in a meeting, and react to his previous answer. Return ONLY JSON: {"fb": one short Turkish feedback sentence about his last answer (empty string for the first turn), "better": a natural improved version of his last answer in simple English (empty string for the first turn or if it was already good), "q": your next line or question in English}. Known recurring mistakes to watch: '+(recentMistakes()||'none');
+}
+function meetContents(){
+  return [user('Start the meeting.')].concat(A.meet.msgs.map(function(m){return m.role==='user'?user(m.text):{role:'model',parts:[{text:JSON.stringify({fb:m.fb||'',better:m.better||'',q:m.q})}]}}));
+}
+function meetPush(r){A.meet.msgs.push({role:'model',fb:r.fb||'',better:r.better||'',q:r.q||'…'})}
+
+/* --- 3. kart üretme --- */
+function aiGenCard(){
+  var h='<section class="card"><div class="row between"><div class="lbl">Durumuna özel kart</div><span class="ai-tag">Gemini</span></div><h2 style="margin-top:6px">Yarın ne konuşacaksın?</h2>';
+  if(!aiReady())return h+needKey()+'</section>';
+  h+='<p class="sub">Durumu Türkçe yaz. O konuşmada lazım olacak 5 kalıp çıkar, istediğini kartlara eklersin.</p>'+ta('ai-gen',3,'Örn. Yarın müdüre bir modülde sıcaklık farkı bulduğumu ve testin uzayacağını anlatacağım.')+'<div class="row" style="margin-top:10px">'+goBtn('ai-gen','Kalıp üret','gen')+'</div>'+errBox('gen');
+  if(A.gen&&A.gen.length)h+='<div class="out"><h3>Önerilen kalıplar</h3><div>'+phraseRows(A.gen,'gen')+'</div><div class="row"><button class="btn sm" data-a="ai-addall" data-src="gen">Hepsini ekle</button></div></div>';
+  return h+'</section>';
+}
+function doGen(){
+  var t=(A.draft['ai-gen']||'').trim();if(t.length<8){A.err.gen='Durumu biraz daha açık yaz.';render();return}
+  var sys=LEARNER+' He describes (in Turkish) a work conversation he will have. Return ONLY JSON: {"phrases": [exactly 5 short, natural sentences he can actually say in that conversation (max 14 words each), each {"en": sentence, "tr": short Turkish description of when to use it}]}. Make them specific to his situation, in the order they would be used.';
+  run('gen',gem(sys,[user(t)],true),function(r){A.gen=r.phrases||[]});
+}
+
+/* --- 4. anlamadığın cümle --- */
+function aiDecodeCard(){
+  var h='<section class="card"><div class="row between"><div class="lbl">Anlamadığın cümle</div><span class="ai-tag">Gemini</span></div><h2 style="margin-top:6px">Neden anlamadın?</h2>';
+  if(!aiReady())return h+needKey()+'</section>';
+  h+='<p class="sub">Altyazıdan anlamadığın cümleyi yapıştır. Anlamını, neden zor duyulduğunu ve kalıbını çıkarsın.</p>'+ta('ai-dec',2,"Örn. We're gonna have to run it again, but I reckon it's the BMS.")+'<div class="row" style="margin-top:10px">'+goBtn('ai-dec','Çöz','dec')+'</div>'+errBox('dec');
+  var r=A.dec;
+  if(r)h+='<div class="out"><h3>Anlamı</h3><p>'+esc(r.meaning_tr||'')+'</p>'+(r.listen_tr?'<h3>Neden zor duyuluyor</h3><p class="sub">'+esc(r.listen_tr)+'</p>':'')+(r.slow?'<h3>Yavaş ve açık hâli</h3><div class="say" style="margin-top:0">'+esc(r.slow)+'</div>':'')+(r.phrases&&r.phrases.length?'<h3>Öğrenilecek kalıp</h3><div>'+phraseRows(r.phrases,'dec')+'</div>':'')+'</div>';
+  return h+'</section>';
+}
+function doDec(){
+  var t=(A.draft['ai-dec']||'').trim();if(t.length<3){A.err.dec='Bir cümle yapıştır.';render();return}
+  var sys=LEARNER+' He did not understand an English sentence he heard in a video. Return ONLY JSON: {"meaning_tr": the meaning in natural Turkish, "listen_tr": short Turkish explanation of why it is hard to hear (linking, reductions like gonna/wanna, slang, idioms) — empty string if nothing special, "slow": the sentence written out fully and clearly (e.g. gonna -> going to), "phrases": [1 or 2 reusable phrases from it, each {"en": phrase, "tr": Turkish meaning}]}.';
+  run('dec',gem(sys,[user(t)],true),function(r){A.dec=r});
+}
+
+/* --- ayarlar --- */
+function vSettings(){
+  var c=aiCfg(),models=A.models;
+  var opts=(models||[]).map(function(m){return '<option value="'+esc(m)+'" '+(m===c.model?'selected':'')+'>'+esc(m)+'</option>'}).join('');
+  var masked=c.key?c.key.slice(0,6)+'…'+c.key.slice(-4):'';
+  return topbar()+
+  '<section class="card"><div class="row between"><div class="lbl">Gemini bağlantısı</div><span class="ai-tag">'+(c.key?'Bağlı':'Bağlı değil')+'</span></div><h2 style="margin-top:6px">API anahtarı</h2>'+
+  '<p class="sub">Google AI Studio\'dan ücretsiz anahtar al: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> → Create API key. Anahtar sadece bu cihazın tarayıcısında saklanır, GitHub\'a gitmez.</p>'+
+  (c.key?'<p class="mono" style="margin-top:10px;font-size:14px">Kayıtlı: '+esc(masked)+'</p>':'')+
+  '<label for="k-key">'+(c.key?'Yeni anahtar':'Anahtar')+'</label><input type="password" id="k-key" autocomplete="off" placeholder="AIza..." data-draft value="'+esc(A.draft['k-key']||'')+'">'+
+  '<div class="row" style="margin-top:10px">'+goBtn('ai-savekey','Kaydet ve test et','key')+(c.key?'<button class="btn ghost" data-a="ai-delkey">Anahtarı sil</button>':'')+'</div>'+errBox('key')+(A.ok.key?'<p class="ok-txt">'+esc(A.ok.key)+'</p>':'')+'</section>'+
+  (c.key?'<section class="card"><div class="lbl">Model</div><p class="sub" style="margin-top:6px">Kullanılan: <b class="mono">'+esc(c.model||'otomatik seçilecek')+'</b>. Varsayılan olarak en yeni kararlı Flash model seçilir, hızlı ve ucuzdur.</p>'+(models?'<label for="k-model">Model seç</label><select id="k-model">'+opts+'</select>':'')+'<div class="row" style="margin-top:10px">'+goBtn('ai-models',models?'Listeyi yenile':'Modelleri yükle','models')+'</div>'+errBox('models')+'</section>':'')+
+  '<section class="card"><div class="lbl">Yedek</div><h2 style="margin-top:6px">İlerlemen bu cihazda</h2><p class="sub">Kartlar, hata defteri ve günler bu tarayıcıda saklanır. Telefon değiştirmeden ya da tarayıcı verisini silmeden önce yedek al.</p><div class="row" style="margin-top:10px"><button class="btn" data-a="backup">Yedeği indir</button><label class="btn" style="margin:0;display:inline-flex;align-items:center;color:var(--ink);font-size:16px" for="restore">Yedekten yükle</label><input type="file" id="restore" accept="application/json,.json" hidden></div></section>'+
+  '<section class="card"><div class="lbl">Sıfırla</div><p class="sub" style="margin-top:6px">Planı 1. günden başlatır, tüm kartları ve hata defterini siler.</p><div class="row" style="margin-top:10px"><button class="btn sm ghost" data-a="reset">Planı sıfırla</button></div></section>'+
+  '<div class="foot"><span id="status">'+esc(status)+'</span><button class="btn sm ghost" data-a="tab" data-tab="today">Bugün\'e dön</button></div>';
+}
+
+/* --- tıklamalar --- */
+function aiClick(a,b){
+  if(a==='ai-fix'){doFix();return true}
+  if(a==='ai-gen'){doGen();return true}
+  if(a==='ai-dec'){doDec();return true}
+  if(a==='ai-addcard'){
+    var src=b.dataset.src,i=Number(b.dataset.i);
+    var list=src==='fix'?(A.fix&&A.fix.phrases):src==='gen'?A.gen:(A.dec&&A.dec.phrases);
+    var p=list&&list[i];if(p&&addCard(p.tr,p.en)){save();toast('Karta eklendi')}render();return true;
+  }
+  if(a==='ai-addall'){var n=0;(A.gen||[]).forEach(function(p){if(addCard(p.tr,p.en))n++});save();toast(n+' kart eklendi');render();return true}
+  if(a==='ai-fix-mist'){var k=0;(A.fix&&A.fix.mistakes||[]).forEach(function(m){if(addMistake(m.wrong,m.right))k++});save();toast(k+' hata deftere eklendi');render();return true}
+  if(a==='ai-meet-start'){
+    var sel=document.getElementById('ai-role');if(sel)A.meet.role=sel.value;
+    A.meet.msgs=[];A.meet.sum=null;
+    run('meet',gem(meetSys(),meetContents(),true),meetPush);return true;
+  }
+  if(a==='ai-meet-send'){
+    var t=(A.draft['ai-reply']||'').trim();if(!t){A.err.meet='Önce cevabını yaz.';render();return true}
+    A.meet.msgs.push({role:'user',text:t});A.draft['ai-reply']='';
+    run('meet',gem(meetSys(),meetContents(),true),meetPush);return true;
+  }
+  if(a==='ai-meet-end'){
+    var sys=LEARNER+' Here is a practice meeting. Evaluate ONLY the learner\'s answers. Return ONLY JSON: {"summary_tr": 2-3 Turkish sentences: how he did and the one thing to work on, "mistakes": [up to 4 of his real mistakes, each {"wrong": what he said, "right": correction}]}.';
+    var log=A.meet.msgs.map(function(m){return m.role==='user'?'LEARNER: '+m.text:'OTHER: '+m.q}).join('\n');
+    run('meet',gem(sys,[user(log)],true),function(r){A.meet.sum=r});return true;
+  }
+  if(a==='ai-meet-mist'){var z=0;(A.meet.sum&&A.meet.sum.mistakes||[]).forEach(function(m){if(addMistake(m.wrong,m.right))z++});save();toast(z+' hata deftere eklendi');render();return true}
+  if(a==='ai-meet-reset'){A.meet.msgs=[];A.meet.sum=null;A.err.meet='';render();return true}
+  if(a==='ai-savekey'){
+    var key=(A.draft['k-key']||'').trim();
+    if(!key){A.err.key='Anahtarı yapıştır.';render();return true}
+    var old=aiCfg();aiSetCfg({key:key});A.ok.key='';
+    var p=loadModels().then(function(l){
+      var m=pickDefault(l);if(!m)throw new Error('Bu anahtarla kullanılabilir Gemini modeli bulunamadı.');
+      return {l:l,m:m};
+    }).catch(function(e){aiSetCfg(old.key?old:{});throw e});
+    run('key',p,function(r){aiSetCfg({key:key,model:r.m});A.models=r.l;A.draft['k-key']='';A.ok.key='Bağlandı. Model: '+r.m});
+    return true;
+  }
+  if(a==='ai-delkey'){aiSetCfg({});A.models=null;A.ok.key='';toast('Anahtar silindi');render();return true}
+  if(a==='ai-models'){run('models',loadModels(),function(l){A.models=l});return true}
+  if(a==='backup'){
+    try{
+      var blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
+      var url=URL.createObjectURL(blob),ln=document.createElement('a');
+      ln.href=url;ln.download='fluentcell-yedek-'+TODAY()+'.json';document.body.appendChild(ln);ln.click();ln.remove();
+      setTimeout(function(){URL.revokeObjectURL(url)},2000);
+    }catch(e){toast('Yedek indirilemedi')}
+    return true;
+  }
+  return false;
+}
+document.addEventListener('input',function(e){
+  var t=e.target;if(t&&t.hasAttribute&&t.hasAttribute('data-draft'))A.draft[t.id]=t.value;
+});
+document.addEventListener('change',function(e){
+  var t=e.target;if(!t)return;
+  if(t.id==='ai-role'){A.meet.role=t.value;render()}
+  else if(t.id==='k-model'){var c=aiCfg();c.model=t.value;aiSetCfg(c);toast('Model: '+t.value);render()}
+  else if(t.id==='restore'&&t.files&&t.files[0]){
+    var fr=new FileReader();
+    fr.onload=function(){try{var d=JSON.parse(fr.result);if(!d||!d.start||!d.cards)throw 0;S=norm(d);lsSave();Q=null;toast('Yedek yüklendi');render()}catch(err){toast('Bu dosya FluentCell yedeği değil')}};
+    fr.readAsText(t.files[0]);
+  }
+});
+
+function render(){
+  var html=V.tab==='today'?vToday():V.tab==='kartlar'?vCards():V.tab==='video'?vVideo():V.tab==='ayarlar'?vSettings():vKonus();
+  $('#app').innerHTML=html;
+  $('#nav').innerHTML=TABS.map(function(t){var k=t[0]==='today'?'today':t[0];return '<button data-a="tab" data-tab="'+t[0]+'" '+(V.tab===t[0]?'aria-current="page"':'')+'>'+IC[k==='konus'?'konus':k]+'<span>'+t[1]+'</span></button>'}).join('');
+}
+
+var toastT=null;
+function toast(t){var el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(function(){el.hidden=true},2600)}
+function go(tab,sub){V.tab=tab;if(sub)V.sub=sub;try{history.replaceState(null,'','#'+tab)}catch(e){}render();window.scrollTo(0,0)}
+function toggle(id){var ds=TODAY();var d=S.done[ds]||[];var i=d.indexOf(id);if(i>-1)d.splice(i,1);else{d.push(id);if(T&&T.id===id)T=null}S.done[ds]=d;save();render()}
+
+var resetArmed=false;
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-a]');if(!b)return;
+  var a=b.dataset.a,id=b.dataset.id;
+  if(aiClick(a,b))return;
+  if(a==='tab'){if(b.dataset.finish){var ds=TODAY(),d=S.done[ds]||[];if(d.indexOf(b.dataset.finish)<0){d.push(b.dataset.finish);S.done[ds]=d;save()}}go(b.dataset.tab)}
+  else if(a==='sub'){V.sub=b.dataset.sub;render()}
+  else if(a==='toggle'){toggle(id)}
+  else if(a==='start'){var done=doneOf(TODAY()).indexOf(id)>-1;if(!done)T={id:id,end:Date.now()+Number(b.dataset.m)*60000};go(b.dataset.tab,b.dataset.sub||undefined)}
+  else if(a==='timer'){if(T&&T.id===id)T=null;else T={id:id,end:Date.now()+Number(b.dataset.m)*60000};render()}
+  else if(a==='reveal'){showAns=true;render()}
+  else if(a==='rate'){rate(Number(b.dataset.q));render()}
+  else if(a==='requeue'){Q=buildQueue();showAns=false;render()}
+  else if(a==='speak'){say(b.dataset.text)}
+  else if(a==='addcard'){
+    var tr=$('#c-tr').value.trim(),en=$('#c-en').value.trim();
+    if(!tr||!en){toast('İki alanı da doldur');return}
+    S.custom.push({id:'c'+Date.now(),tr:tr,en:en});Q=null;save();render();toast('Kart eklendi')
+  }
+  else if(a==='copy'){
+    var ta=document.getElementById(b.dataset.target);
+    try{navigator.clipboard.writeText(ta.value).then(function(){toast('Kopyalandı')}).catch(function(){ta.focus();ta.select();toast('Seçildi. Şimdi kopyala')})}
+    catch(err){ta.focus();ta.select();toast('Seçildi. Şimdi kopyala')}
+  }
+  else if(a==='addm'){
+    var w=$('#m-w').value.trim(),r=$('#m-r').value.trim();
+    if(!w||!r){toast('İki alanı da doldur');return}
+    S.mistakes.push({id:'m'+Date.now(),wrong:w,right:r,ok:false});save();render()
+  }
+  else if(a==='mok'){S.mistakes.forEach(function(x){if(x.id===id)x.ok=true});save();render()}
+  else if(a==='mdel'){S.mistakes=S.mistakes.filter(function(x){return x.id!==id});save();render()}
+  else if(a==='mtocard'){
+    var m=S.mistakes.filter(function(x){return x.id===id})[0];if(!m)return;
+    S.custom.push({id:'c'+Date.now(),tr:'Hata düzeltme. Yanlış: "'+m.wrong+'"',en:m.right});Q=null;save();toast('Karta çevrildi');render()
+  }
+  else if(a==='reset'){
+    if(!resetArmed){resetArmed=true;b.textContent='Emin misin? Tekrar dokun';setTimeout(function(){resetArmed=false;if(b.isConnected)b.textContent='Planı sıfırla'},4000);return}
+    resetArmed=false;S=blank();Q=null;T=null;save();render();toast('Plan sıfırlandı')
+  }
+});
+
+var h=(location.hash||'').replace('#','');
+if(['today','kartlar','video','konus','ayarlar'].indexOf(h)>-1)V.tab=h;
+window.addEventListener('hashchange',function(){var x=(location.hash||'').replace('#','');if(['today','kartlar','video','konus','ayarlar'].indexOf(x)>-1&&x!==V.tab){V.tab=x;render()}});
+render();
+})();
+</script>
+</body>
+</html>
