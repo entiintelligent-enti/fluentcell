@@ -216,6 +216,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .ok-txt{color:var(--ok); font-size:15px; margin-top:10px}
 @media (prefers-reduced-motion: reduce){ .ring .pg,.ring .pg2,summary::after{transition:none} .spin{animation-duration:2s} }
 .practice-hero{border-radius:26px;background:radial-gradient(ellipse at 95% 0%,#296950,transparent 65%),#12382e;color:#f5fff8;padding:clamp(24px,6vw,46px);margin-bottom:14px}.practice-hero h2{font-size:clamp(37px,8vw,65px);line-height:1.03;letter-spacing:-.05em;margin:14px 0;color:inherit}.practice-hero p{color:#d7efe0;margin-bottom:18px}.practice-hero small{color:#c3f599;font-weight:700;letter-spacing:.15em}.practice-hero .practice-cta{background:#c3f599;color:#153a28}.scene-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin-top:14px}.practice-session label,.practice-session .row{margin-top:14px}.practice-session .sub:empty{display:none}.practice-example{margin:16px 0;padding-top:12px;border-top:1px solid var(--line)}.practice-plan>summary{padding:14px 4px;font-weight:600}
+nav.tabs{grid-template-columns:repeat(3,1fr)}nav.tabs button{font-size:12px}.study-links{display:grid;gap:10px;margin-top:14px}.study-link{display:grid;gap:5px;text-align:left;padding:14px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:var(--card2)}.study-link span{font-size:14px;color:var(--mute)}.study-second .btn{margin-top:12px}.practice-hero .practice-done{margin:12px 0 0}.practice-hero h2{font-size:clamp(32px,7vw,52px)}
 </style>
 </head>
 <body>
@@ -397,12 +398,12 @@ setInterval(function(){
 
 /* ---------- görünümler ---------- */
 var V={tab:'today',sub:'listen'};
-var TABS=[['today','Bugün'],['kartlar','Kartlar'],['video','Video'],['konus','Konuş']];
+var TABS=[['today','Bugün'],['kartlar','Kartlar'],['ek','Ek çalışmalar']];
 
 function topbar(){
   var di=dayInfo(TODAY());
-  var T={today:'Bugün',kartlar:'Kartlar',video:'Dinle',konus:'Konuş',ayarlar:'Ayarlar'}[V.tab]||'FluentCell';
-  return '<header class="top"><div><span class="cap">FluentCell · Gün '+di.n+' · Hafta '+(di.idx+1)+'</span><h1 class="brand">'+T+'</h1></div><span class="rt">'+(V.tab==='ayarlar'?'':'<button class="gear" data-a="tab" data-tab="ayarlar" aria-label="Ayarlar">'+IC.gear+'</button>')+'</span></header>';
+  var T={today:'Bugün',kartlar:'Kart tekrarı',ek:'Ek çalışmalar',video:'Dinleme',konus:'İş İngilizcesi',ayarlar:'Ayarlar'}[V.tab]||'FluentCell';
+  return '<header class="top"><div><span class="cap">FluentCell</span><h1 class="brand">'+T+'</h1></div><span class="rt">'+(V.tab==='ayarlar'?'':'<button class="gear" data-a="tab" data-tab="ayarlar" aria-label="Ayarlar">'+IC.gear+'</button>')+'</span></header>';
 }
 
 function blockBar(tab,sub){
@@ -424,6 +425,9 @@ function rings(pct,g){
 }
 function vToday(){
   if(practice)return practiceView();
+  return topbar()+practiceHome();
+}
+function vExtra(){
   var ds=TODAY(),di=dayInfo(ds),plan=planFor(ds),done=doneOf(ds),dt=parse(ds);
   var n=plan.filter(function(b){return done.indexOf(b.id)>-1}).length,total=plan.length,pct=Math.round(n/total*100);
   
@@ -438,7 +442,10 @@ function vToday(){
   var hist='';
   for(var k=6;k>=0;k--){var d2=addDays(ds,-k),dn=doneOf(d2).length,pl=planFor(d2).length;var cl=dn>=pl?'full':(dn>=2?'part':'');hist+='<div class="'+cl+(k===0?' now':'')+'"><i></i><span>'+DS[parse(d2).getDay()]+'</span></div>'}
   var pr=promptFor(ds);
-  return topbar()+practiceHome()+'<details class="practice-plan"><summary>Ek çalışma planı</summary>'+
+  return topbar()+'<section class="card"><h2>İhtiyacına göre çalış</h2><div class="study-links">'+
+  studyLink('video','Dinleme ve taklit','Kısa videolarla kulağını alıştır.')+
+  studyLink('konus','İş İngilizcesi','Toplantı provası, cümle düzeltme ve hata defteri.')+
+  '</div></section><details class="practice-plan"><summary>Ayrıntılı çalışma planı</summary>'+ 
    '<section class="card"><div class="lbl" style="margin-bottom:14px">'+DAYS[dt.getDay()]+', '+dt.getDate()+' '+MONTHS[dt.getMonth()]+'</div><div class="ringwrap">'+rings(pct,Math.min(1,streak()/7))+'<div class="kv"><div class="p"><b>'+n+'/'+total+'</b><span>Blok tamamlandı</span></div><div class="g"><b>'+streak()+' gün</b><span>Seri · en az 2 blok</span></div><div><b>'+(S.reviews[ds]||0)+'</b><span>Kart çalışıldı</span></div></div></div></section>'+
    '<section class="card"><div class="lbl">Bugünün planı</div>'+rows+'</section>'+
    '<section class="card"><div class="lbl">Bugünün konuşma konusu</div><p style="margin-top:8px;font-weight:500">'+esc(pr.tr)+'</p><div class="say">'+esc(pr.en)+'</div><div class="row" style="margin-top:12px"><button class="btn sm" data-a="tab" data-tab="konus">Konuşmaya git</button></div></section>'+
@@ -447,6 +454,9 @@ function vToday(){
    '<div class="foot"><span id="status">'+esc(status)+'</span><span>'+(aiReady()?'Gemini bağlı':'Gemini bağlı değil')+'</span></div></details>';
 }
 
+function studyLink(tab,title,detail){
+ return '<button class="study-link" data-a="tab" data-tab="'+tab+'"><strong>'+title+'</strong><span>'+detail+'</span></button>';
+}
 function vCards(){
   if(!Q||Qdate!==TODAY()){Q=buildQueue();showAns=false}
   var c=counts();
@@ -487,15 +497,16 @@ function vVideo(){
   var main=listen
    ?'<section class="card"><div class="lbl">Pasif dinleme · hafta '+(di.idx+1)+'</div><h2 style="margin-top:6px">'+esc(wk.title)+'</h2><p class="sub">Hepsini anlaman gerekmiyor. Amaç kulağı İngilizcenin hızına ve ritmine alıştırmak.</p>'+steps(STEPS_LISTEN)+'<div class="row" style="margin-top:14px"><button class="btn sm" data-a="tab" data-tab="kartlar">Kartlara kalıp ekle</button></div></section>'+aiDecodeCard()+'<section class="card"><div class="lbl" style="margin-bottom:6px">Bu hafta dinlenecekler</div>'+resList(wk.listen)+note+'</section>'
    :'<section class="card"><div class="lbl">Shadowing · hafta '+(di.idx+1)+'</div><h2 style="margin-top:6px">Duy, taklit et, kaydet</h2><p class="sub">Konuşma hızını ve ritmini kazandıran en etkili çalışma. Her gün yeni video yerine aynı bölümü 3 gün çalış.</p>'+steps(STEPS_SHADOW)+'</section><section class="card"><div class="lbl" style="margin-bottom:6px">Bu hafta shadowing için</div>'+resList(wk.shadow)+note+'</section>';
-  return topbar()+blockBar('video',V.sub)+seg+main;
+  return topbar()+studyBack()+blockBar('video',V.sub)+seg+main;
 }
 
+function studyBack(){return '<button class="btn ghost sm" data-a="tab" data-tab="ek">← Ek çalışmalar</button>'}
 function vKonus(){
   var ds=TODAY(),pr=promptFor(ds),wd=parse(ds).getDay();
   var m=S.mistakes.filter(function(x){return !x.ok});
   var mh=m.length?m.slice().reverse().slice(0,8).map(function(x){return '<div class="mist"><div class="w">'+esc(x.wrong)+'</div><div class="r">'+esc(x.right)+'</div><div class="row" style="margin-top:8px"><button class="btn sm" data-a="mtocard" data-id="'+x.id+'">Karta çevir</button><button class="btn sm ghost" data-a="mok" data-id="'+x.id+'">Oturdu</button><button class="btn sm ghost" data-a="mdel" data-id="'+x.id+'">Sil</button></div></div>'}).join(''):'<p class="sub">Henüz hata yok. Her kayıttan sonra en önemli 3 hatayı buraya ekle.</p>';
   var head=wd===4?'Tutor dersi konusu':(wd===6?'Toplantı provası':'Bugünün konusu');
-  return topbar()+blockBar('konus')+
+  return topbar()+studyBack()+blockBar('konus')+
    '<section class="card"><div class="lbl">'+head+'</div><h2 style="margin-top:6px">'+esc(pr.tr)+'</h2><div class="say">'+esc(pr.en)+'</div>'+steps(STEPS_SPEAK)+'</section>'+
    aiFixCard()+aiMeetCard()+
    '<section class="card"><details><summary>Sesli pratik (Gemini veya Claude uygulaması)</summary><p class="sub">Telefonundaki Gemini Live ya da Claude sesli modunu aç, bu istemi ilk mesaj olarak gönder.</p><label for="p-voice">Hazır istem</label><textarea id="p-voice" rows="6" readonly>'+esc(PROMPT_VOICE)+'</textarea><div class="row" style="margin-top:10px"><button class="btn pri" data-a="copy" data-target="p-voice">Kopyala</button></div></details></section>'+
@@ -776,10 +787,16 @@ function practiceHome(){
  const due=scenes.findIndex((_,i)=>progress[i]&&progress[i].due<=today);
  const fresh=scenes.findIndex((_,i)=>!progress[i]);
  const next=due>=0?due:Math.max(0,fresh);
- return '<section class="practice-hero"><small>GÜNLÜK İNGİLİZCE</small><h2>Derdini anlat.<br>Sohbeti sürdür.</h2><p>İngilizceyi dinle ve kendi cümlenle cevap ver.</p>'+
- practiceButton('start',(due>=0?'Tekrar':'Konuşmaya başla')+' · '+scenes[next][0],next,'practice-cta')+
- '</section><section class="card"><h2>Durum seç</h2><p class="sub">'+Object.values(progress).filter(x=>x.solo).length+'/'+scenes.length+' ipucusuz tamamlandı (kendi değerlendirmen)</p><div class="scene-grid">'+
- scenes.map((s,i)=>practiceButton('start',s[0],i)).join('')+'</div></section>';
+ const didToday=Object.values(progress).some(item=>item.last===today);
+ const cards=counts();
+ return '<section class="practice-hero"><small>1 · KONUŞMA PRATİĞİ</small><h2>'+scenes[next][0]+'</h2><p>'+scenes[next][1]+'</p>'+
+ practiceButton('start',due>=0?'Konuşmayı tekrar et':didToday?'Bir konuşma daha yap':'Konuşmaya başla',next,'practice-cta')+
+ (didToday?'<p class="practice-done">✓ Bugünkü konuşman kaydedildi.</p>':'')+'</section>'+
+ '<section class="card study-second"><div class="lbl">2 · KART TEKRARI</div><h2>İfadeleri hatırla</h2><p class="sub">'+cards.due+' tekrar · '+cards.fresh+' yeni kart</p>'+
+ '<button class="btn" data-a="tab" data-tab="kartlar">Kartları aç</button></section>'+
+ '<details class="card practice-plan"><summary>Başka bir konuşma seç</summary><div class="scene-grid">'+
+ scenes.map((s,i)=>practiceButton('start',s[0],i)).join('')+'</div></details>';
+
 }
 function practiceView(){
  const p=practice,s=scenes[p.id],offset=2+p.answers.length*4;
@@ -792,7 +809,7 @@ function practiceView(){
    (p.coach?'<div class="practice-example"><h3>Konuşma geri bildirimi</h3><p>'+esc(p.coach.result)+'</p>'+(p.coach.example?'<p class="say">'+esc(p.coach.example)+'</p>':'')+'</div>':
     aiReady()?practiceButton('coach',p.busy?'Değerlendiriliyor…':'Gemini ile geri bildirim al','','sm'):'')+
    (p.error?'<p class="err" role="status">'+esc(p.error)+'</p>':'')+
-   (p.saved?'<p class="sub" role="status">Kaydedildi. Sonraki tekrar '+p.saved+' gün sonra.</p>':
+   (p.saved?'<p class="sub" role="status">Kaydedildi. Sonraki tekrar '+p.saved+' gün sonra.</p><div class="row"><button class="btn pri" data-a="tab" data-tab="kartlar">Kart tekrarına geç</button>'+practiceButton('exit','Bugüne dön')+'</div>':
    '<p class="sub">İsteğini anlatıp takip sorusuna cevap verebildin mi?</p><div class="row">'+practiceButton('save','Evet','yes','pri')+practiceButton('save','Tekrar çalışacağım','again')+'</div>')+'</section>';
  }
  return header+'<section class="card practice-session"><div class="lbl">Konuşma sırası '+(p.answers.length+1)+' / 2</div><div class="row">'+
@@ -904,7 +921,7 @@ function handlePractice(action,id){
    const solo=id==='yes'&&!p.helped;
    const stage=solo?Math.min((old.stage||0)+1,4):0;
    p.saved=[1,2,4,7,14][stage];
-   stats[p.id]={due:addDays(TODAY(),p.saved),stage,solo:!!(old.solo||solo)};
+   stats[p.id]={due:addDays(TODAY(),p.saved),stage,last:TODAY(),solo:!!(old.solo||solo)};
    save();
  }
  render();
@@ -915,9 +932,9 @@ document.addEventListener('input',e=>{
 });
 
 function render(){
-  var html=V.tab==='today'?vToday():V.tab==='kartlar'?vCards():V.tab==='video'?vVideo():V.tab==='ayarlar'?vSettings():vKonus();
+  var html=V.tab==='today'?vToday():V.tab==='kartlar'?vCards():V.tab==='video'?vVideo():V.tab==='ayarlar'?vSettings():V.tab==='ek'?vExtra():vKonus();
   $('#app').innerHTML=html;
-  $('#nav').innerHTML=TABS.map(function(t){var k=t[0]==='today'?'today':t[0];return '<button data-a="tab" data-tab="'+t[0]+'" '+(V.tab===t[0]?'aria-current="page"':'')+'>'+IC[k==='konus'?'konus':k]+'<span>'+t[1]+'</span></button>'}).join('');
+  $('#nav').innerHTML=TABS.map(function(t){var k=t[0]==='ek'?'video':t[0];return '<button data-a="tab" data-tab="'+t[0]+'" '+((V.tab===t[0]||(t[0]==='ek'&&['video','konus'].includes(V.tab)))?'aria-current="page"':'')+'>'+IC[k==='konus'?'konus':k]+'<span>'+t[1]+'</span></button>'}).join('');
 }
 
 var toastT=null;
@@ -967,8 +984,8 @@ document.addEventListener('click',function(e){
 });
 
 var h=(location.hash||'').replace('#','');
-if(['today','kartlar','video','konus','ayarlar'].indexOf(h)>-1)V.tab=h;
-window.addEventListener('hashchange',function(){var x=(location.hash||'').replace('#','');if(['today','kartlar','video','konus','ayarlar'].indexOf(x)>-1&&x!==V.tab){leavePractice();V.tab=x;render()}});
+if(['today','kartlar','video','konus','ek','ayarlar'].indexOf(h)>-1)V.tab=h;
+window.addEventListener('hashchange',function(){var x=(location.hash||'').replace('#','');if(['today','kartlar','video','konus','ek','ayarlar'].indexOf(x)>-1&&x!==V.tab){leavePractice();V.tab=x;render()}});
 render();
 })();
 </script>
